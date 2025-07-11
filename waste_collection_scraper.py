@@ -5,6 +5,7 @@ Uses the discovered API endpoint with polling for data.
 """
 
 import argparse
+import os
 import re
 import time
 from datetime import datetime
@@ -236,7 +237,7 @@ def generate_ical(collections):
     return "\n".join(ical_lines)
 
 
-def test_with_saved_html(filename):
+def test_with_saved_html(filename, output_file=None):
     """
     Test the extraction using a saved HTML file.
     """
@@ -253,12 +254,12 @@ def test_with_saved_html(filename):
             for i, item in enumerate(collection_data, 1):
                 print(f"{i:2d}. {item}")
 
-            # Generate and save iCal
-            ical_content = generate_ical(collection_data)
-            ical_filename = filename.replace(".html", ".ics")
-            with open(ical_filename, "w", encoding="utf-8") as f:
-                f.write(ical_content)
-            print(f"\nSaved iCal format to: {ical_filename}")
+            # Generate and save iCal if output file specified
+            if output_file:
+                ical_content = generate_ical(collection_data)
+                with open(output_file, "w", encoding="utf-8") as f:
+                    f.write(ical_content)
+                print(f"\nSaved iCal format to: {output_file}")
         else:
             print("No collection data found in the saved HTML file.")
 
@@ -279,24 +280,35 @@ def main():
 Examples:
   %(prog)s 1234567            # Use specific property ID
   %(prog)s saved.html         # Test with saved HTML file
+  %(prog)s 1234567 -o calendar.ics  # Save calendar to specific file
+  BRENT_PROPERTY_ID=1234567 %(prog)s  # Use environment variable
 """,
     )
 
     parser.add_argument(
         "property_id",
-        help="Property ID to lookup or HTML file to test with",
+        nargs="?",
+        help="Property ID to lookup or HTML file to test with (uses BRENT_PROPERTY_ID env var if not provided)",
+    )
+
+    parser.add_argument(
+        "-o", "--output",
+        help="Output calendar file (e.g., calendar.ics). If not specified, no calendar file is created.",
     )
 
     args = parser.parse_args()
 
-    # Check if it's a file path (contains .html)
-    if args.property_id.endswith(".html"):
-        print(f"Testing with saved HTML file: {args.property_id}")
-        print("=" * 60)
-        test_with_saved_html(args.property_id)
-        return
+    # Get property_id from args or environment variable
+    property_id = args.property_id or os.environ.get("BRENT_PROPERTY_ID")
+    if not property_id:
+        parser.error("Property ID is required either as argument or BRENT_PROPERTY_ID environment variable")
 
-    property_id = args.property_id
+    # Check if it's a file path (contains .html)
+    if property_id.endswith(".html"):
+        print(f"Testing with saved HTML file: {property_id}")
+        print("=" * 60)
+        test_with_saved_html(property_id, args.output)
+        return
     print(f"Extracting waste collection dates for property: {property_id}")
     print("=" * 60)
 
@@ -309,12 +321,12 @@ Examples:
         for i, item in enumerate(collection_data, 1):
             print(f"{i:2d}. {item}")
 
-        # Generate and save iCal
-        ical_content = generate_ical(collection_data)
-        ical_filename = f"waste_collection_{property_id}.ics"
-        with open(ical_filename, "w", encoding="utf-8") as f:
-            f.write(ical_content)
-        print(f"\nSaved iCal format to: {ical_filename}")
+        # Generate and save iCal if output file specified
+        if args.output:
+            ical_content = generate_ical(collection_data)
+            with open(args.output, "w", encoding="utf-8") as f:
+                f.write(ical_content)
+            print(f"\nSaved iCal format to: {args.output}")
     else:
         print("\nNo collection data found.")
         print("The property ID may be invalid or the service may be unavailable.")
