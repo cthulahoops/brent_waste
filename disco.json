@@ -3,7 +3,7 @@
     "services": {
         "web": {
             "type": "generator",
-            "publicPath": "dist",
+            "publicPath": "/site/dist",
             "volumes": [
                 {
                     "name": "dist-data",
@@ -14,7 +14,7 @@
         "update-calendar": {
             "type": "cron",
             "schedule": "0 6 * * *",
-            "command": "uv run python waste_collection_scraper.py -o dist/calendar.ics",
+            "command": "uv run python waste_collection_scraper.py -o /site/dist/calendar.ics",
             "volumes": [
                 {
                     "name": "dist-data",
@@ -25,7 +25,7 @@
         "test-cron": {
             "type": "cron",
             "schedule": "*/5 * * * *",
-            "command": "date > dist/date.txt",
+            "command": "date > /site/dist/date.txt",
             "volumes": [
                 {
                     "name": "dist-data",
