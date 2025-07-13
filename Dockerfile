@@ -1,7 +1,5 @@
 FROM ghcr.io/astral-sh/uv:python3.12-alpine
 
-ARG BRENT_PROPERTY_ID=""
-
 WORKDIR /site
 
 COPY pyproject.toml uv.lock /site/
