@@ -8,4 +8,4 @@ RUN uv sync --frozen
 
 COPY . /site
 
-RUN uv run python waste_collection_scraper.py -o dist/calendar.ics
+RUN --mount=type=secret,id=BRENT_PROPERTY_ID BRENT_PROPERTY_ID=$(cat /run/secrets/BRENT_PROPERTY_ID) uv run python waste_collection_scraper.py -o dist/calendar.ics
