@@ -7,10 +7,9 @@ COPY pyproject.toml uv.lock /site/
 RUN uv sync --frozen
 
 COPY . /site
-COPY start.sh /start.sh
 
 RUN mkdir -p dist
 
-RUN chmod +x /start.sh
+RUN chmod +x /site/start.sh
 
-CMD ["/start.sh"]
+CMD ["/site/start.sh"]
