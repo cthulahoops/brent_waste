@@ -2,8 +2,8 @@
     "version": "1.0",
     "services": {
         "web": {
-            "type": "web",
-            "command": "python -m http.server 8000 -d /site/dist",
+            "port": 8080,
+            "command": "python -m http.server 8080 -d /site/dist",
             "volumes": [
                 {
                     "name": "dist-data",
