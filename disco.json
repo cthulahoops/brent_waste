@@ -2,8 +2,8 @@
     "version": "1.0",
     "services": {
         "web": {
-            "type": "generator",
-            "publicPath": "/site/dist",
+            "type": "web",
+            "command": "python -m http.server 8000 -d /site/dist",
             "volumes": [
                 {
                     "name": "dist-data",
