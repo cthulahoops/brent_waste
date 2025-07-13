@@ -208,7 +208,7 @@ def generate_ical(collections):
     ]
 
     for collection in collections:
-        if ": " in collection and "(last)" not in collection:
+        if ": " in collection:
             service_name, date_text = collection.split(": ", 1)
             service_name = service_name.replace("\n", " ").strip()
 
@@ -294,7 +294,8 @@ Examples:
     )
 
     parser.add_argument(
-        "-o", "--output",
+        "-o",
+        "--output",
         help="Output calendar file (e.g., calendar.ics). If not specified, no calendar file is created.",
     )
 
@@ -309,7 +310,9 @@ Examples:
     # Get property_id from args or environment variable
     property_id = args.property_id or os.environ.get("BRENT_PROPERTY_ID")
     if not property_id:
-        parser.error("Property ID is required either as argument or BRENT_PROPERTY_ID environment variable")
+        parser.error(
+            "Property ID is required either as argument or BRENT_PROPERTY_ID environment variable"
+        )
 
     # Check if it's a file path (contains .html)
     if property_id.endswith(".html"):
