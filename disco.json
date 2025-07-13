@@ -8,7 +8,12 @@
         "update-calendar": {
             "type": "cron",
             "schedule": "0 6 * * *",
-            "command": "uv run python waste_collection_scraper.py"
+            "command": "uv run python waste_collection_scraper.py -o dist/calendar.ics"
+        },
+        "test-cron": {
+            "type": "cron",
+            "schedule": "*/5 * * * *",
+            "command": "date > dist/date.txt"
         }
     }
 }
