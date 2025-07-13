@@ -131,6 +131,15 @@ def extract_collection_dates(soup):
                     if date_text:
                         collections.append(f"{service_name} (last): {date_text}")
 
+            # Look for "Renewal" date (typically for garden waste)
+            renewal_row = next_section.find("dt", string="Renewal")
+            if renewal_row:
+                renewal_value = renewal_row.find_next("dd")
+                if renewal_value:
+                    date_text = renewal_value.get_text().strip()
+                    if date_text:
+                        collections.append(f"{service_name} (renewal): {date_text}")
+
     # If no structured data found, fall back to regex pattern matching
     if not collections:
         collections = _extract_dates_with_regex(soup)
