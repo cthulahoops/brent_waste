@@ -3,17 +3,35 @@
     "services": {
         "web": {
             "type": "generator",
-            "publicPath": "dist"
+            "publicPath": "dist",
+            "volumes": [
+                {
+                    "name": "dist-data",
+                    "destinationPath": "/site/dist"
+                }
+            ]
         },
         "update-calendar": {
             "type": "cron",
             "schedule": "0 6 * * *",
-            "command": "uv run python waste_collection_scraper.py -o dist/calendar.ics"
+            "command": "uv run python waste_collection_scraper.py -o dist/calendar.ics",
+            "volumes": [
+                {
+                    "name": "dist-data",
+                    "destinationPath": "/site/dist"
+                }
+            ]
         },
         "test-cron": {
             "type": "cron",
             "schedule": "*/5 * * * *",
-            "command": "date > dist/date.txt"
+            "command": "date > dist/date.txt",
+            "volumes": [
+                {
+                    "name": "dist-data",
+                    "destinationPath": "/site/dist"
+                }
+            ]
         }
     }
 }
