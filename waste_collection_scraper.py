@@ -140,16 +140,24 @@ def extract_collection_dates(soup):
 
 def parse_collection_date(date_text):
     """
-    Parse collection date text and return a datetime object.
+    Parse collection date text and return a datetime object with time if available.
     """
     # Clean up the date text
     date_text = date_text.strip()
 
-    # Remove time information if present
+    # Extract time information if present
+    time_part = None
     if " at " in date_text:
-        date_text = date_text.split(" at ")[0]
+        parts = date_text.split(" at ")
+        date_text = parts[0]
+        if len(parts) > 1:
+            time_info = parts[1].strip()
+            # Remove adjustment notes from time part
+            if "(this collection was adjusted" in time_info:
+                time_info = time_info.split("(this collection was adjusted")[0].strip()
+            time_part = time_info
 
-    # Remove adjustment notes
+    # Remove adjustment notes from date part
     if "(this collection was adjusted" in date_text:
         date_text = date_text.split("(this collection was adjusted")[0].strip()
 
@@ -171,25 +179,78 @@ def parse_collection_date(date_text):
                     current_year = datetime.now().year
                     date_part = f"{date_part} {current_year}"
 
-                return datetime.strptime(date_part, "%d %B %Y")
+                # Parse the date
+                date_obj = datetime.strptime(date_part, "%d %B %Y")
+
+                # Add time if available
+                if time_part:
+                    time_obj = parse_time(time_part)
+                    if time_obj:
+                        date_obj = date_obj.replace(
+                            hour=time_obj.hour, minute=time_obj.minute
+                        )
+
+                return date_obj
 
         # Try other formats
         date_text = re.sub(r"(\d+)(?:st|nd|rd|th)", r"\1", date_text)
 
         # Try "15 July 2024" format
         try:
-            return datetime.strptime(date_text, "%d %B %Y")
+            date_obj = datetime.strptime(date_text, "%d %B %Y")
+            if time_part:
+                time_obj = parse_time(time_part)
+                if time_obj:
+                    date_obj = date_obj.replace(
+                        hour=time_obj.hour, minute=time_obj.minute
+                    )
+            return date_obj
         except ValueError:
             pass
 
         # Try "15 July" format (add current year)
         try:
             current_year = datetime.now().year
-            return datetime.strptime(f"{date_text} {current_year}", "%d %B %Y")
+            date_obj = datetime.strptime(f"{date_text} {current_year}", "%d %B %Y")
+            if time_part:
+                time_obj = parse_time(time_part)
+                if time_obj:
+                    date_obj = date_obj.replace(
+                        hour=time_obj.hour, minute=time_obj.minute
+                    )
+            return date_obj
         except ValueError:
             pass
 
     except (ValueError, TypeError):
+        pass
+
+    return None
+
+
+def parse_time(time_text):
+    """
+    Parse time text like "11:10am" and return a datetime object with time.
+    """
+    if not time_text:
+        return None
+
+    try:
+        # Clean up the time text
+        time_text = time_text.strip()
+
+        # Handle formats like "11:10am", "8:38am", " 8:42am"
+        time_text = time_text.strip()
+
+        # Try parsing with am/pm
+        if time_text.lower().endswith("am") or time_text.lower().endswith("pm"):
+            return datetime.strptime(time_text, "%I:%M%p")
+
+        # Try parsing 24-hour format
+        if ":" in time_text:
+            return datetime.strptime(time_text, "%H:%M")
+
+    except ValueError:
         pass
 
     return None
@@ -214,18 +275,25 @@ def generate_ical(collections):
 
             parsed_date = parse_collection_date(date_text)
             if parsed_date:
-                # Format date for iCal (YYYYMMDD)
-                date_str = parsed_date.strftime("%Y%m%d")
-
                 # Create unique ID
+                date_str = parsed_date.strftime("%Y%m%d")
                 uid = f"{service_name.replace(' ', '_')}_{date_str}@brent.gov.uk"
+
+                # Format datetime for iCal
+                if parsed_date.hour == 0 and parsed_date.minute == 0:
+                    # No time information, use all-day event
+                    dtstart = f"DTSTART;VALUE=DATE:{date_str}"
+                else:
+                    # Include time information
+                    datetime_str = parsed_date.strftime("%Y%m%dT%H%M%S")
+                    dtstart = f"DTSTART:{datetime_str}"
 
                 # Create event
                 ical_lines.extend(
                     [
                         "BEGIN:VEVENT",
                         f"UID:{uid}",
-                        f"DTSTART;VALUE=DATE:{date_str}",
+                        dtstart,
                         f"SUMMARY:{service_name}",
                         f"DESCRIPTION:Waste collection: {service_name}",
                         "CATEGORIES:Waste Collection",
