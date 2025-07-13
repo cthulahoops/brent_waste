@@ -14,7 +14,7 @@ import requests
 from bs4 import BeautifulSoup
 
 
-def get_collection_data(property_id, max_attempts=10):
+def get_collection_data(property_id, max_attempts=10, cache_html=False):
     """
     Poll the Brent Council API endpoint until data loads.
     """
@@ -36,11 +36,12 @@ def get_collection_data(property_id, max_attempts=10):
             if response.status_code == 200:
                 content = response.text
 
-                # Write HTML to file for analysis
-                filename = f"brent_waste_{property_id}_attempt_{attempt + 1}.html"
-                with open(filename, "w", encoding="utf-8") as f:
-                    f.write(content)
-                print(f"  Saved HTML to {filename}")
+                # Write HTML to file for analysis if caching enabled
+                if cache_html:
+                    filename = f"brent_waste_{property_id}_attempt_{attempt + 1}.html"
+                    with open(filename, "w", encoding="utf-8") as f:
+                        f.write(content)
+                    print(f"  Saved HTML to {filename}")
 
                 # Check if still loading
                 if "Loading your bin days..." in content:
@@ -281,6 +282,7 @@ Examples:
   %(prog)s 1234567            # Use specific property ID
   %(prog)s saved.html         # Test with saved HTML file
   %(prog)s 1234567 -o calendar.ics  # Save calendar to specific file
+  %(prog)s 1234567 --cache-html  # Cache HTML files for debugging
   BRENT_PROPERTY_ID=1234567 %(prog)s  # Use environment variable
 """,
     )
@@ -294,6 +296,12 @@ Examples:
     parser.add_argument(
         "-o", "--output",
         help="Output calendar file (e.g., calendar.ics). If not specified, no calendar file is created.",
+    )
+
+    parser.add_argument(
+        "--cache-html",
+        action="store_true",
+        help="Cache HTML files for debugging. If not specified, HTML files are not saved.",
     )
 
     args = parser.parse_args()
@@ -312,7 +320,7 @@ Examples:
     print(f"Extracting waste collection dates for property: {property_id}")
     print("=" * 60)
 
-    collection_data = get_collection_data(property_id)
+    collection_data = get_collection_data(property_id, cache_html=args.cache_html)
 
     if collection_data:
         print(f"\nFound {len(collection_data)} collection dates/info:")

@@ -1,0 +1,14 @@
+{
+    "version": "1.0",
+    "services": {
+        "web": {
+            "type": "generator",
+            "publicPath": "dist"
+        },
+        "update-calendar": {
+            "type": "cron",
+            "schedule": "0 6 * * *",
+            "command": "uv run python waste_collection_scraper.py"
+        }
+    }
+}
