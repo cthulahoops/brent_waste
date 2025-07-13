@@ -3,7 +3,7 @@
     "services": {
         "web": {
             "port": 8080,
-            "command": "python -m http.server 8080 -d /site/dist",
+            "command": "bash -c 'BRENT_PROPERTY_ID=$BRENT_PROPERTY_ID uv run python waste_collection_scraper.py -o /site/dist/calendar.ics && python -m http.server 8080 -d /site/dist'",
             "volumes": [
                 {
                     "name": "dist-data",
