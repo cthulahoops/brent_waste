@@ -12,7 +12,7 @@
         },
         "update-calendar": {
             "type": "cron",
-            "schedule": "0 6 * * *",
+            "schedule": "40 * * * *",
             "command": "uv run python waste_collection_scraper.py -o /site/dist/calendar.ics",
             "volumes": [
                 {
