@@ -12,19 +12,8 @@
         },
         "update-calendar": {
             "type": "cron",
-            "schedule": "40 * * * *",
+            "schedule": "40 6 * * *",
             "command": "uv run python waste_collection_scraper.py -o /site/dist/calendar.ics",
-            "volumes": [
-                {
-                    "name": "dist-data",
-                    "destinationPath": "/site/dist"
-                }
-            ]
-        },
-        "test-cron": {
-            "type": "cron",
-            "schedule": "*/5 * * * *",
-            "command": "date > /site/dist/date.txt",
             "volumes": [
                 {
                     "name": "dist-data",
