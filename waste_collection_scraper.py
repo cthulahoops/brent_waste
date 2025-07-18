@@ -327,9 +327,19 @@ def generate_ical(collections):
         if len(services) == 1:
             # Single service, use original format
             service = services[0]
+            clean_name = (
+                service["name"].replace("collection", "").replace("waste", "").strip()
+            )
+            clean_name = clean_name.replace(
+                "(blue sacks)", ""
+            ).strip()  # Remove (blue sacks)
+            clean_name = " ".join(
+                clean_name.split()
+            )  # Replace multiple spaces with single space
+
             uid = f"{service['name'].replace(' ', '_')}_{date_str}@brent.gov.uk"
-            summary = service["name"]
-            description = f"Waste collection: {service['name']}"
+            summary = f"Waste Collection: {clean_name}"
+            description = f"Waste collection: {clean_name}"
 
             if service["time"]:
                 datetime_str = service["time"].strftime("%Y%m%dT%H%M%S")
@@ -338,9 +348,15 @@ def generate_ical(collections):
                 dtstart = f"DTSTART;VALUE=DATE:{date_str}"
         else:
             # Multiple services, create consolidated event
-            service_names = [
-                s["name"].replace("collection", "").strip() for s in services
-            ]
+            service_names = []
+            for s in services:
+                name = s["name"].replace("collection", "").replace("waste", "").strip()
+                name = name.replace("(blue sacks)", "").strip()  # Remove (blue sacks)
+                name = " ".join(
+                    name.split()
+                )  # Replace multiple spaces with single space
+                service_names.append(name)
+
             uid = f"collections_{date_str}@brent.gov.uk"
             summary = f"Waste Collections: {', '.join(service_names)}"
 
@@ -349,17 +365,35 @@ def generate_ical(collections):
                 dtstart = f"DTSTART;VALUE=DATE:{date_str}"
                 time_details = []
                 for service in services:
+                    clean_name = (
+                        service["name"]
+                        .replace("collection", "")
+                        .replace("waste", "")
+                        .strip()
+                    )
+                    clean_name = clean_name.replace(
+                        "(blue sacks)", ""
+                    ).strip()  # Remove (blue sacks)
+                    clean_name = " ".join(
+                        clean_name.split()
+                    )  # Replace multiple spaces with single space
                     if service["time"]:
                         time_str = service["time"].strftime("%I:%M%p").lower()
-                        time_details.append(f"• {service['name']}: {time_str}")
+                        time_details.append(f"+ {clean_name}: {time_str}")
                     else:
-                        time_details.append(f"• {service['name']}")
+                        time_details.append(f"+ {clean_name}")
 
-                description = f"Waste collections:\\n{chr(10).join(time_details)}"
+                description = (
+                    f"Waste collections:\\n{chr(10).join(time_details)}".replace(
+                        "\n", "\\n"
+                    )
+                )
             else:
                 # All-day event without specific times
                 dtstart = f"DTSTART;VALUE=DATE:{date_str}"
-                description = f"Waste collections:\\n{chr(10).join(f'• {name}' for name in service_names)}"
+                description = f"Waste collections:\\n{chr(10).join(f'+ {name}' for name in service_names)}".replace(
+                    "\n", "\\n"
+                )
 
         # Create event
         ical_lines.extend(
@@ -378,6 +412,19 @@ def generate_ical(collections):
     # Add renewal events separately
     for service_name, parsed_date, date_text in renewal_events:
         date_str = parsed_date.strftime("%Y%m%d")
+        clean_name = service_name.replace("collection", "").strip()
+        clean_name = clean_name.replace(
+            "(blue sacks)", ""
+        ).strip()  # Remove (blue sacks)
+        clean_name = " ".join(
+            clean_name.split()
+        )  # Replace multiple spaces with single space
+
+        # Make renewal events more explicit
+        if "(renewal)" in clean_name.lower():
+            clean_name = clean_name.replace("(renewal)", "").strip()
+            clean_name = f"{clean_name} Renewal"
+
         uid = f"{service_name.replace(' ', '_')}_{date_str}@brent.gov.uk"
 
         if parsed_date.hour == 0 and parsed_date.minute == 0:
@@ -391,8 +438,8 @@ def generate_ical(collections):
                 "BEGIN:VEVENT",
                 f"UID:{uid}",
                 dtstart,
-                f"SUMMARY:{service_name}",
-                f"DESCRIPTION:{service_name}",
+                f"SUMMARY:{clean_name}",
+                f"DESCRIPTION:{clean_name}",
                 "CATEGORIES:Waste Collection",
                 f"DTSTAMP:{datetime.now().strftime('%Y%m%dT%H%M%SZ')}",
                 "END:VEVENT",
