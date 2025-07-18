@@ -268,6 +268,7 @@ def parse_time(time_text):
 def generate_ical(collections):
     """
     Generate iCal format from collection data.
+    Groups multiple collections on the same date into single events.
     """
     ical_lines = [
         "BEGIN:VCALENDAR",
@@ -277,6 +278,10 @@ def generate_ical(collections):
         "METHOD:PUBLISH",
     ]
 
+    # Group collections by date
+    collections_by_date = {}
+    renewal_events = []
+
     for collection in collections:
         if ": " in collection:
             service_name, date_text = collection.split(": ", 1)
@@ -284,32 +289,115 @@ def generate_ical(collections):
 
             parsed_date = parse_collection_date(date_text)
             if parsed_date:
-                # Create unique ID
                 date_str = parsed_date.strftime("%Y%m%d")
-                uid = f"{service_name.replace(' ', '_')}_{date_str}@brent.gov.uk"
 
-                # Format datetime for iCal
-                if parsed_date.hour == 0 and parsed_date.minute == 0:
-                    # No time information, use all-day event
-                    dtstart = f"DTSTART;VALUE=DATE:{date_str}"
+                # Handle renewal events separately
+                if "(renewal)" in service_name.lower():
+                    renewal_events.append((service_name, parsed_date, date_text))
                 else:
-                    # Include time information
-                    datetime_str = parsed_date.strftime("%Y%m%dT%H%M%S")
-                    dtstart = f"DTSTART:{datetime_str}"
+                    # Group regular collections by date
+                    if date_str not in collections_by_date:
+                        collections_by_date[date_str] = {
+                            "date": parsed_date,
+                            "services": [],
+                            "has_times": False,
+                        }
 
-                # Create event
-                ical_lines.extend(
-                    [
-                        "BEGIN:VEVENT",
-                        f"UID:{uid}",
-                        dtstart,
-                        f"SUMMARY:{service_name}",
-                        f"DESCRIPTION:Waste collection: {service_name}",
-                        "CATEGORIES:Waste Collection",
-                        f"DTSTAMP:{datetime.now().strftime('%Y%m%dT%H%M%SZ')}",
-                        "END:VEVENT",
-                    ]
-                )
+                    collections_by_date[date_str]["services"].append(
+                        {
+                            "name": service_name,
+                            "time": (
+                                parsed_date
+                                if parsed_date.hour != 0 or parsed_date.minute != 0
+                                else None
+                            ),
+                            "original_text": date_text,
+                        }
+                    )
+
+                    if parsed_date.hour != 0 or parsed_date.minute != 0:
+                        collections_by_date[date_str]["has_times"] = True
+
+    # Create events for grouped collections
+    for date_str, group in collections_by_date.items():
+        services = group["services"]
+        date_obj = group["date"]
+        has_times = group["has_times"]
+
+        if len(services) == 1:
+            # Single service, use original format
+            service = services[0]
+            uid = f"{service['name'].replace(' ', '_')}_{date_str}@brent.gov.uk"
+            summary = service["name"]
+            description = f"Waste collection: {service['name']}"
+
+            if service["time"]:
+                datetime_str = service["time"].strftime("%Y%m%dT%H%M%S")
+                dtstart = f"DTSTART:{datetime_str}"
+            else:
+                dtstart = f"DTSTART;VALUE=DATE:{date_str}"
+        else:
+            # Multiple services, create consolidated event
+            service_names = [
+                s["name"].replace("collection", "").strip() for s in services
+            ]
+            uid = f"collections_{date_str}@brent.gov.uk"
+            summary = f"Waste Collections: {', '.join(service_names)}"
+
+            if has_times:
+                # Create all-day event with times in description
+                dtstart = f"DTSTART;VALUE=DATE:{date_str}"
+                time_details = []
+                for service in services:
+                    if service["time"]:
+                        time_str = service["time"].strftime("%I:%M%p").lower()
+                        time_details.append(f"• {service['name']}: {time_str}")
+                    else:
+                        time_details.append(f"• {service['name']}")
+
+                description = f"Waste collections:\\n{chr(10).join(time_details)}"
+            else:
+                # All-day event without specific times
+                dtstart = f"DTSTART;VALUE=DATE:{date_str}"
+                description = f"Waste collections:\\n{chr(10).join(f'• {name}' for name in service_names)}"
+
+        # Create event
+        ical_lines.extend(
+            [
+                "BEGIN:VEVENT",
+                f"UID:{uid}",
+                dtstart,
+                f"SUMMARY:{summary}",
+                f"DESCRIPTION:{description}",
+                "CATEGORIES:Waste Collection",
+                f"DTSTAMP:{datetime.now().strftime('%Y%m%dT%H%M%SZ')}",
+                "END:VEVENT",
+            ]
+        )
+
+    # Add renewal events separately
+    for service_name, parsed_date, date_text in renewal_events:
+        date_str = parsed_date.strftime("%Y%m%d")
+        uid = f"{service_name.replace(' ', '_')}_{date_str}@brent.gov.uk"
+
+        if parsed_date.hour == 0 and parsed_date.minute == 0:
+            dtstart = f"DTSTART;VALUE=DATE:{date_str}"
+        else:
+            datetime_str = parsed_date.strftime("%Y%m%dT%H%M%S")
+            dtstart = f"DTSTART:{datetime_str}"
+
+        ical_lines.extend(
+            [
+                "BEGIN:VEVENT",
+                f"UID:{uid}",
+                dtstart,
+                f"SUMMARY:{service_name}",
+                f"DESCRIPTION:{service_name}",
+                "CATEGORIES:Waste Collection",
+                f"DTSTAMP:{datetime.now().strftime('%Y%m%dT%H%M%SZ')}",
+                "END:VEVENT",
+            ]
+        )
 
     ical_lines.append("END:VCALENDAR")
     return "\n".join(ical_lines)
