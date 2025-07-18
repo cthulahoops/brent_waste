@@ -13,3 +13,4 @@ wheels/
 *.ics
 .python-version
 *.local.json
+.env

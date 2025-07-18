@@ -10,10 +10,21 @@
                 }
             ]
         },
-        "update-calendar": {
+        "update-waste-calendar": {
             "type": "cron",
             "schedule": "0 6,18 * * 1-3",
-            "command": "uv run python waste_collection_scraper.py -o /site/dist/calendar.ics",
+            "command": "uv run python waste_collection_scraper.py -o /site/dist/$WASTE_CALENDAR_FILENAME",
+            "volumes": [
+                {
+                    "name": "dist-data",
+                    "destinationPath": "/site/dist"
+                }
+            ]
+        },
+        "update-lnhs-calendar": {
+            "type": "cron",
+            "schedule": "0 7 1,15 * *",
+            "command": "uv run python lnhs_calendar_scraper.py -o /site/dist/$LNHS_CALENDAR_FILENAME --no-cache",
             "volumes": [
                 {
                     "name": "dist-data",
