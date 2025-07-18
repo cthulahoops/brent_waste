@@ -3,6 +3,8 @@
 # Create dist directory if it doesn't exist
 mkdir -p /site/dist
 
+cp /site/index.html /site/dist/index.html
+
 # Generate waste calendar if it doesn't exist
 if [ ! -f "/site/dist/$WASTE_CALENDAR_FILENAME" ]; then
     echo "No waste calendar found, generating..."
