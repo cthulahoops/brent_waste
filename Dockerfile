@@ -10,7 +10,7 @@ COPY . /site
 
 RUN mkdir -p dist
 
-COPY index.html dist/index.html
+COPY index.html /site/dist
 
 RUN chmod +x /site/start.sh
 
