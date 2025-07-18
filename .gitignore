@@ -9,8 +9,8 @@ wheels/
 # Virtual environments
 .venv
 
-*.html
 *.ics
 .python-version
 *.local.json
 .env
+cache/
