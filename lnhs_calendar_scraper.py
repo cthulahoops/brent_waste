@@ -229,6 +229,7 @@ Examples:
 
     parser.add_argument(
         "--output",
+        "-o",
         default="lnhs_events.ics",
         help="Output calendar file (default: lnhs_events.ics)",
     )
@@ -248,7 +249,6 @@ Examples:
     # Set logging level
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
-
 
     # Create scraper instance
     scraper = LNHSCalendarScraper(cache_dir=args.cache_dir)

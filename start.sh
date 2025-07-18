@@ -12,7 +12,7 @@ fi
 # Generate LNHS calendar if it doesn't exist
 if [ ! -f "/site/dist/$LNHS_CALENDAR_FILENAME" ]; then
     echo "No LNHS calendar found, generating..."
-    uv run python lnhs_calendar_scraper.py -o /site/dist/$LNHS_CALENDAR_FILENAME
+    uv run python lnhs_calendar_scraper.py -o /site/dist/$LNHS_CALENDAR_FILENAME --no-cache
 fi
 
 # Start web server
