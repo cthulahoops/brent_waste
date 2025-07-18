@@ -7,16 +7,15 @@ and merges them into a single calendar.
 
 import argparse
 import logging
-import os
 import re
 import time
+import traceback
 from datetime import datetime, timedelta
 from pathlib import Path
-from urllib.parse import urljoin
 
 import requests
 from bs4 import BeautifulSoup
-from icalendar import Calendar, Event
+from icalendar import Calendar
 
 
 class LNHSCalendarScraper:
@@ -50,12 +49,12 @@ class LNHSCalendarScraper:
         if use_cache and cache_file.exists():
             # Check if cache is less than 1 hour old
             if time.time() - cache_file.stat().st_mtime < 3600:
-                self.logger.info(f"Using cached calendar for {year}/{month:02d}")
+                self.logger.info("Using cached calendar for %s/%02d", year, month)
                 return cache_file.read_text(encoding="utf-8")
 
         # Download calendar page
         url = f"{self.base_url}/index.php/activities/full-programme/monthcalendar/{year}/{month}/-"
-        self.logger.info(f"Downloading calendar page: {url}")
+        self.logger.info("Downloading calendar page: %s", url)
 
         try:
             response = self.session.get(url, timeout=10)
@@ -67,7 +66,7 @@ class LNHSCalendarScraper:
             return response.text
 
         except requests.RequestException as e:
-            self.logger.error(f"Failed to download calendar page: {e}")
+            self.logger.error("Failed to download calendar page: %s", e)
             return None
 
     def extract_event_ids(self, html_content):
@@ -91,7 +90,7 @@ class LNHSCalendarScraper:
                 if event_id not in event_ids:
                     event_ids.append(event_id)
 
-        self.logger.info(f"Found {len(event_ids)} unique event IDs")
+        self.logger.info("Found %d unique event IDs", len(event_ids))
         return sorted(event_ids)
 
     def download_event_ical(self, event_id, use_cache=True):
@@ -101,12 +100,12 @@ class LNHSCalendarScraper:
         cache_file = self.cache_dir / f"event_{event_id}.ics"
 
         if use_cache and cache_file.exists():
-            self.logger.debug(f"Using cached iCal for event {event_id}")
+            self.logger.debug("Using cached iCal for event %d", event_id)
             return cache_file.read_text(encoding="utf-8")
 
         # Download iCal file
         url = f"{self.base_url}/index.php/activities/full-programme/icals.icalevent/-?tmpl=component&evid={event_id}"
-        self.logger.info(f"Downloading iCal for event {event_id}")
+        self.logger.info("Downloading iCal for event %d", event_id)
 
         try:
             response = self.session.get(url, timeout=10)
@@ -118,7 +117,7 @@ class LNHSCalendarScraper:
             return response.text
 
         except requests.RequestException as e:
-            self.logger.warning(f"Failed to download iCal for event {event_id}: {e}")
+            self.logger.warning("Failed to download iCal for event %d: %s", event_id, e)
             return None
 
     def merge_ical_files(self, ical_contents):
@@ -146,26 +145,20 @@ class LNHSCalendarScraper:
                         master_calendar.add_component(component)
                         events_added += 1
 
-            except Exception as e:
-                self.logger.error(f"Failed to parse iCal content: {e}")
+            except (ValueError, TypeError) as e:
+                self.logger.error("Failed to parse iCal content: %s", e)
                 continue
 
-        self.logger.info(f"Merged {events_added} events into master calendar")
+        self.logger.info("Merged %d events into master calendar", events_added)
         return master_calendar
 
-    def scrape_calendar(
-        self, year, month_range=2, output_file="lnhs_events.ics", use_cache=True
-    ):
-        """
-        Main scraping function to extract events and generate merged iCal.
-        """
+    def _get_event_ids_for_months(self, year, month_range, use_cache):
+        """Helper method to get event IDs for specified months."""
         current_date = datetime.now()
         start_year = year or current_date.year
         start_month = current_date.month
-
         all_event_ids = []
 
-        # Scrape calendar pages for specified months
         for month_offset in range(month_range):
             target_date = datetime(start_year, start_month, 1) + timedelta(
                 days=32 * month_offset
@@ -173,36 +166,39 @@ class LNHSCalendarScraper:
             target_year = target_date.year
             target_month = target_date.month
 
-            self.logger.info(f"Scraping calendar for {target_year}/{target_month:02d}")
+            self.logger.info("Scraping calendar for %s/%02d", target_year, target_month)
 
-            # Get calendar page
             html_content = self.get_calendar_page(target_year, target_month, use_cache)
-
-            # Extract event IDs
             event_ids = self.extract_event_ids(html_content)
             all_event_ids.extend(event_ids)
 
-        # Remove duplicates and sort
-        all_event_ids = sorted(list(set(all_event_ids)))
-        self.logger.info(f"Total unique events to process: {len(all_event_ids)}")
+        return sorted(list(set(all_event_ids)))
 
-        # Download iCal files for all events
+    def _download_all_icals(self, event_ids, use_cache):
+        """Helper method to download all iCal files."""
         ical_contents = []
-        for event_id in all_event_ids:
+        for event_id in event_ids:
             ical_content = self.download_event_ical(event_id, use_cache)
             if ical_content:
                 ical_contents.append(ical_content)
+            time.sleep(0.5)  # Be respectful
+        return ical_contents
 
-            # Be respectful - small delay between requests
-            time.sleep(0.5)
+    def scrape_calendar(
+        self, year, month_range=2, output_file="lnhs_events.ics", use_cache=True
+    ):
+        """
+        Main scraping function to extract events and generate merged iCal.
+        """
+        all_event_ids = self._get_event_ids_for_months(year, month_range, use_cache)
+        self.logger.info("Total unique events to process: %d", len(all_event_ids))
 
-        # Merge all iCal files
+        ical_contents = self._download_all_icals(all_event_ids, use_cache)
         merged_calendar = self.merge_ical_files(ical_contents)
 
-        # Save merged calendar
         output_path = Path(output_file)
         output_path.write_bytes(merged_calendar.to_ical())
-        self.logger.info(f"Saved merged calendar to: {output_path}")
+        self.logger.info("Saved merged calendar to: %s", output_path)
 
         return str(output_path)
 
@@ -244,7 +240,7 @@ Examples:
     parser.add_argument(
         "--no-cache", action="store_true", help="Force re-download all data"
     )
-    
+
     parser.add_argument("--verbose", action="store_true", help="Enable verbose logging")
 
     args = parser.parse_args()
@@ -267,14 +263,11 @@ Examples:
         )
         print(f"Successfully generated calendar: {output_file}")
 
-    except Exception as e:
+    except (ValueError, TypeError, KeyError) as e:
         print(f"Error: {e}")
         if args.verbose:
-            import traceback
-
             traceback.print_exc()
 
 
 if __name__ == "__main__":
     main()
-
