@@ -508,7 +508,8 @@ Examples:
     parser.add_argument(
         "-o",
         "--output",
-        help="Output calendar file (e.g., calendar.ics). If not specified, no calendar file is created.",
+        default=os.environ.get("WASTE_CALENDAR_FILENAME"),
+        help="Output calendar file (e.g., calendar.ics). Uses WASTE_CALENDAR_FILENAME env var if not specified.",
     )
 
     parser.add_argument(

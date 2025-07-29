@@ -7,6 +7,7 @@ and merges them into a single calendar.
 
 import argparse
 import logging
+import os
 import re
 import time
 import traceback
@@ -230,8 +231,8 @@ Examples:
     parser.add_argument(
         "--output",
         "-o",
-        default="lnhs_events.ics",
-        help="Output calendar file (default: lnhs_events.ics)",
+        default=os.environ.get("LNHS_CALENDAR_FILENAME", "lnhs_events.ics"),
+        help="Output calendar file (uses LNHS_CALENDAR_FILENAME env var, default: lnhs_events.ics)",
     )
 
     parser.add_argument(

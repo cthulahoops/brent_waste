@@ -6,15 +6,15 @@ mkdir -p /site/dist
 cp /site/index.html /site/dist/index.html
 
 # Generate waste calendar if it doesn't exist
-if [ ! -f "/site/dist/$WASTE_CALENDAR_FILENAME" ]; then
+if [ ! -f "$WASTE_CALENDAR_FILENAME" ]; then
     echo "No waste calendar found, generating..."
-    uv run python waste_collection_scraper.py -o /site/dist/$WASTE_CALENDAR_FILENAME
+    uv run python waste_collection_scraper.py
 fi
 
 # Generate LNHS calendar if it doesn't exist
-if [ ! -f "/site/dist/$LNHS_CALENDAR_FILENAME" ]; then
+if [ ! -f "$LNHS_CALENDAR_FILENAME" ]; then
     echo "No LNHS calendar found, generating..."
-    uv run python lnhs_calendar_scraper.py -o /site/dist/$LNHS_CALENDAR_FILENAME --no-cache
+    uv run python lnhs_calendar_scraper.py --no-cache
 fi
 
 # Start web server
