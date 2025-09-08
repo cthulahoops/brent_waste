@@ -21,7 +21,8 @@ def get_collection_data(property_id, max_attempts=10, cache_html=False):
     url = f"https://recyclingservices.brent.gov.uk/waste/{property_id}"
 
     headers = {
-        "Referer": f"https://recyclingservices.brent.gov.uk/waste/{property_id}",
+        "Referer": "https://recyclingservices.brent.gov.uk/waste/",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
     }
 
     session = requests.Session()
